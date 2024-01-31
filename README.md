@@ -8,9 +8,15 @@ pnpm sst dev
 
 ## Packages
 
-### Webapp
+### `/packages/core`
 
-`/packages/site` - Standard NextJS 14 site
+Any shared code, scripts, etc.
+
+Not directly ran unless via other packages below.
+
+### `/packages/site`
+
+Standard NextJS 14 site
 
 Run with:
 
@@ -18,9 +24,9 @@ Run with:
 pnpm run dev
 ```
 
-### API Gateway
+### `/packages/functions`
 
-`/packages/functions` - AWS API Gateway with Lambdas
+AWS API Gateway with Lambdas
 
 Runs with above command `pnpm sst dev`
 
