@@ -1,4 +1,4 @@
-import { StackContext, Api, EventBus } from "sst/constructs";
+import { StackContext, Api, EventBus, NextjsSite } from "sst/constructs";
 
 export function API({ stack }: StackContext) {
   const bus = new EventBus(stack, "bus", {
@@ -20,11 +20,16 @@ export function API({ stack }: StackContext) {
     },
   });
 
+  const site = new NextjsSite(stack, "site", {
+    path: "packages/site",
+  });
+
   bus.subscribe("todo.created", {
     handler: "packages/functions/src/events/todo-created.handler",
   });
 
   stack.addOutputs({
+    URL: site.url,
     ApiEndpoint: api.url,
   });
 }
