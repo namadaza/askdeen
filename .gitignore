@@ -8,6 +8,10 @@ node_modules
 # opennext
 .open-next
 
+# next
+.next
+.next/
+
 # misc
 .DS_Store
 

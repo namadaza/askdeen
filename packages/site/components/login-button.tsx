@@ -7,18 +7,35 @@ import { cn } from '@/lib/utils'
 import { Button, type ButtonProps } from '@/components/ui/button'
 import { IconGitHub, IconSpinner } from '@/components/ui/icons'
 
+type Provider = 'github'
+
 interface LoginButtonProps extends ButtonProps {
-  showGithubIcon?: boolean
+  showIcon?: boolean
   text?: string
+  provider: Provider
 }
 
 export function LoginButton({
   text = 'Login with GitHub',
-  showGithubIcon = true,
+  showIcon = true,
   className,
+  provider = 'github',
   ...props
 }: LoginButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false)
+
+  let iconElement = null
+  switch (provider) {
+    case 'github':
+      iconElement = <IconGitHub className="mr-2" />
+      break
+    case null:
+      iconElement = null
+      break
+    default:
+      provider satisfies never
+  }
+
   return (
     <Button
       variant="outline"
@@ -33,8 +50,8 @@ export function LoginButton({
     >
       {isLoading ? (
         <IconSpinner className="mr-2 animate-spin" />
-      ) : showGithubIcon ? (
-        <IconGitHub className="mr-2" />
+      ) : showIcon ? (
+        iconElement
       ) : null}
       {text}
     </Button>
