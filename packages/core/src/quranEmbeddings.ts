@@ -1,49 +1,70 @@
-import { DocumentClient } from "aws-sdk/clients/dynamodb";
-import { Table } from "sst/node/table";
-import { dbClient, TableRequiredSchema } from "./tableConstants.js";
+import { config } from "dotenv";
+import { Pinecone, ServerlessSpecCloudEnum } from "@pinecone-database/pinecone";
 
-const tableName = "stage-askdeen-quranEmbeddings"; // Table.quranEmbeddings.tableName;
+config({ path: "../.env.local" });
 
-// SCHEMA
-export const TableQuranEmbeddingsAccessPatterns = {
+export const PINECONE_QURAN_INDEX = "quran-search";
+export const PINECONE_INDEX_CLOUD = "aws" as ServerlessSpecCloudEnum;
+export const PINECONE_INDEX_REGION = "us-west-2" as const;
+
+// PINECONEDB SCHEMA
+export const TableQuranAccessPatterns = {
   byAyat: (absoluteAyat: number) => ({
-    pk: `a#${absoluteAyat}`,
-    sk: `a#${absoluteAyat}`,
+    id: `a#${absoluteAyat}`,
   }),
 };
 
-export interface TableQuranEmbeddings extends TableRequiredSchema {
-  entityType: "quranEmbedding";
+export type TableQuranMetadata = {
   ayat: number;
   absoluteAyat: number;
   surah: number;
   englishText: string;
   arabicText: string;
-  embedding: number[];
-  createdAt?: string;
-  updatedAt?: string;
-  deletedAt?: string;
-}
-
-// FUNCTIONS
-export const getQuranAyat = async (absoluteAyat: number) => {
-  const params: DocumentClient.GetItemInput = {
-    TableName: tableName,
-    Key: TableQuranEmbeddingsAccessPatterns.byAyat(absoluteAyat),
-  };
-  const response = await dbClient.get(params).promise();
-
-  console.log("response", response);
-  return response.Item as TableQuranEmbeddings;
 };
 
-export const createQuranAyat = async (data: TableQuranEmbeddings) => {
-  const params: DocumentClient.PutItemInput = {
-    TableName: tableName,
-    Item: data,
-  };
-  const response = await dbClient.put(params).promise();
+export const getPinecone = () => {
+  return new Pinecone({
+    apiKey: process.env.PINECONE_API_KEY ?? "",
+  });
+};
 
-  console.log("response", response);
-  return response;
+export const RUN_ONCE_createQuranIndex = async (pineconeClient?: Pinecone) => {
+  let pinecone = pineconeClient;
+  if (!pinecone) {
+    pinecone = getPinecone();
+  }
+  await pinecone.createIndex({
+    name: PINECONE_QURAN_INDEX,
+    dimension: 1536,
+    spec: {
+      serverless: {
+        region: PINECONE_INDEX_REGION,
+        cloud: PINECONE_INDEX_CLOUD,
+      },
+    },
+    waitUntilReady: true,
+    suppressConflicts: true,
+  });
+};
+
+export const upsertQuranAyat = async (
+  metadata: TableQuranMetadata,
+  values: number[],
+  pineconeClient?: Pinecone,
+) => {
+  let pinecone = pineconeClient;
+  if (!pinecone) {
+    pinecone = getPinecone();
+  }
+
+  const pineconeIndex =
+    pinecone.index<TableQuranMetadata>(PINECONE_QURAN_INDEX);
+
+  const upsertParams = {
+    id: TableQuranAccessPatterns.byAyat(metadata.absoluteAyat).id,
+    metadata: metadata,
+    values,
+  };
+
+  await pineconeIndex.upsert([upsertParams]);
 };
