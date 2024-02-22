@@ -16,11 +16,14 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { toast } from 'react-hot-toast'
 import { usePathname, useRouter } from 'next/navigation'
+import { TableQuranMetadata } from '@askdeen/core/quranEmbeddings'
+import { SURAHS } from '@askdeen/core/lib/surah'
+import { uniqueById } from '@askdeen/core/lib/utils'
 
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview'
 export interface ChatProps extends React.ComponentProps<'div'> {
@@ -35,27 +38,63 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
     'ai-token',
     null
   )
+  const [appendedRag, setAppendedRag] = useState(false)
   const [previewTokenDialog, setPreviewTokenDialog] = useState(IS_PREVIEW)
   const [previewTokenInput, setPreviewTokenInput] = useState(previewToken ?? '')
-  const { messages, append, reload, stop, isLoading, input, setInput } =
-    useChat({
-      initialMessages,
+  const {
+    messages,
+    append,
+    reload,
+    stop,
+    isLoading,
+    input,
+    setInput,
+    data,
+    setMessages
+  } = useChat({
+    initialMessages,
+    id,
+    body: {
       id,
-      body: {
-        id,
-        previewToken
-      },
-      onResponse(response) {
-        if (response.status === 401) {
-          toast.error(response.statusText)
-        }
-      },
-      onFinish() {
-        if (!path.includes('chat')) {
-          window.history.pushState({}, '', `/chat/${id}`)
-        }
+      previewToken
+    },
+    onResponse(response) {
+      if (response.status === 401) {
+        toast.error(response.statusText)
       }
-    })
+    },
+    onFinish() {
+      if (!path.includes('chat')) {
+        window.history.pushState({}, '', `/chat/${id}`)
+      }
+    }
+  })
+
+  useEffect(() => {
+    console.log('am I loading?', isLoading, 'appendedRag', appendedRag)
+    if (data?.length && !isLoading && !appendedRag) {
+      console.log('isLoading', isLoading, 'appendedRag', appendedRag)
+      const ragAyatMessages: Message[] = (
+        data?.[0] as TableQuranMetadata[]
+      ).map(ayat => ({
+        id: `${ayat.surah}-${ayat.ayat}`,
+        role: 'assistant',
+        content: `
+          ${ayat.englishText} 
+          ${ayat.arabicText} 
+          **Surah ${SURAHS[String(ayat.surah ?? 1)].name}, ${ayat.surah}:${ayat.ayat}**
+        `
+      }))
+      setMessages(uniqueById([...messages, ...ragAyatMessages]))
+      console.log('ragAyatMessages', ragAyatMessages)
+      setAppendedRag(true)
+    }
+  }, [data, messages, setMessages, data?.length, isLoading, appendedRag])
+
+  useEffect(() => {
+    setAppendedRag(false)
+  }, [isLoading, setAppendedRag])
+
   return (
     <>
       <div className={cn('pb-[200px] pt-4 md:pt-10', className)}>

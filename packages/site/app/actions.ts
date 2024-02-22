@@ -2,16 +2,18 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { kv } from '@vercel/kv'
 
 import { auth } from '@/auth'
 import { type Chat } from '@/lib/types'
+
+// TODO replace with dynamodb
 
 export async function getChats(userId?: string | null) {
   if (!userId) {
     return []
   }
 
+  /*
   try {
     const pipeline = kv.pipeline()
     const chats: string[] = await kv.zrange(`user:chat:${userId}`, 0, -1, {
@@ -28,9 +30,12 @@ export async function getChats(userId?: string | null) {
   } catch (error) {
     return []
   }
+  */
+  return []
 }
 
 export async function getChat(id: string, userId: string) {
+  /*
   const chat = await kv.hgetall<Chat>(`chat:${id}`)
 
   if (!chat || (userId && chat.userId !== userId)) {
@@ -38,6 +43,8 @@ export async function getChat(id: string, userId: string) {
   }
 
   return chat
+  */
+  return null
 }
 
 export async function removeChat({ id, path }: { id: string; path: string }) {
@@ -49,6 +56,7 @@ export async function removeChat({ id, path }: { id: string; path: string }) {
     }
   }
 
+  /*
   const uid = await kv.hget<string>(`chat:${id}`, 'userId')
 
   if (uid !== session?.user?.id) {
@@ -62,6 +70,8 @@ export async function removeChat({ id, path }: { id: string; path: string }) {
 
   revalidatePath('/')
   return revalidatePath(path)
+  */
+  return redirect('/')
 }
 
 export async function clearChats() {
@@ -73,6 +83,7 @@ export async function clearChats() {
     }
   }
 
+  /*
   const chats: string[] = await kv.zrange(`user:chat:${session.user.id}`, 0, -1)
   if (!chats.length) {
     return redirect('/')
@@ -87,10 +98,12 @@ export async function clearChats() {
   await pipeline.exec()
 
   revalidatePath('/')
+  */
   return redirect('/')
 }
 
 export async function getSharedChat(id: string) {
+  /*
   const chat = await kv.hgetall<Chat>(`chat:${id}`)
 
   if (!chat || !chat.sharePath) {
@@ -98,6 +111,8 @@ export async function getSharedChat(id: string) {
   }
 
   return chat
+    */
+  return null
 }
 
 export async function shareChat(id: string) {
@@ -109,6 +124,7 @@ export async function shareChat(id: string) {
     }
   }
 
+  /*
   const chat = await kv.hgetall<Chat>(`chat:${id}`)
 
   if (!chat || chat.userId !== session.user.id) {
@@ -125,4 +141,6 @@ export async function shareChat(id: string) {
   await kv.hmset(`chat:${chat.id}`, payload)
 
   return payload
+    */
+  return {}
 }

@@ -10,7 +10,7 @@ import {
   upsertQuranAyat,
 } from "../quranEmbeddings.js";
 
-config({ path: "../.env.local" });
+config({ path: "../../../../.env.local" });
 
 const progressBar = new cliProgress.SingleBar(
   {},

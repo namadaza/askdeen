@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import OpenAI from "openai";
 import { PINECONE_QURAN_INDEX, getPinecone } from "../quranEmbeddings.js";
 
-config({ path: "../.env.local" });
+config({ path: "../../../../.env.local" });
 
 const QUERY = "Who do muslims worship?";
 
