@@ -3,9 +3,6 @@ import {
   QueryResponse,
   ServerlessSpecCloudEnum,
 } from "@pinecone-database/pinecone";
-import { Config } from "sst/node/config";
-import { SURAHS } from "./lib/surah";
-import { ChatCompletionMessageParam } from "openai/resources";
 
 export const PINECONE_QURAN_INDEX = "quran-search";
 export const PINECONE_INDEX_CLOUD = "aws" as ServerlessSpecCloudEnum;
@@ -26,17 +23,11 @@ export type TableQuranMetadata = {
   arabicText: string;
 };
 
-export const getPinecone = () => {
-  return new Pinecone({
-    apiKey: Config.PINECONE_API_KEY ?? "",
-  });
-};
-
 // FUNCTIONS
 export const RUN_ONCE_createQuranIndex = async (pineconeClient?: Pinecone) => {
   let pinecone = pineconeClient;
   if (!pinecone) {
-    pinecone = getPinecone();
+    throw new Error("Pinecone client is required");
   }
   await pinecone.createIndex({
     name: PINECONE_QURAN_INDEX,
@@ -55,13 +46,9 @@ export const RUN_ONCE_createQuranIndex = async (pineconeClient?: Pinecone) => {
 export const upsertQuranAyat = async (
   metadata: TableQuranMetadata,
   values: number[],
-  pineconeClient?: Pinecone,
+  pineconeClient: Pinecone,
 ) => {
   let pinecone = pineconeClient;
-  if (!pinecone) {
-    pinecone = getPinecone();
-  }
-
   const pineconeIndex =
     pinecone.index<TableQuranMetadata>(PINECONE_QURAN_INDEX);
 
@@ -77,11 +64,12 @@ export const upsertQuranAyat = async (
 export const getMatchingAyatRAG = async ({
   embeddingValue,
   numberOfResults = 3,
+  pinecone,
 }: {
   embeddingValue: number[];
   numberOfResults?: number;
+  pinecone: Pinecone;
 }): Promise<QueryResponse<TableQuranMetadata>> => {
-  const pinecone = getPinecone();
   const pineconeIndex =
     pinecone.index<TableQuranMetadata>(PINECONE_QURAN_INDEX);
 

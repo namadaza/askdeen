@@ -4,11 +4,8 @@ import OpenAI from "openai";
 import cliProgress from "cli-progress";
 import { SURAHS } from "../lib/surah.js";
 import { QURANARABIC } from "../lib/quranArabic.js";
-import {
-  TableQuranMetadata,
-  getPinecone,
-  upsertQuranAyat,
-} from "../quranEmbeddings.js";
+import { TableQuranMetadata, upsertQuranAyat } from "../quranEmbeddings.js";
+import { Pinecone } from "@pinecone-database/pinecone";
 
 config({ path: "../../../../.env.local" });
 
@@ -21,7 +18,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY ?? "",
 });
 
-const pinecone = getPinecone();
+const pinecone = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY ?? "",
+});
 
 type QuranEmbeddingParquetRow = {
   Surah: string; // is a number
@@ -44,10 +43,9 @@ const main = async () => {
   let record: QuranEmbeddingParquetRow | null = null;
 
   // Etc loop logic
-  let counter = 0;
-  progressBar.start(10, 0);
+  progressBar.start(6236, 0);
 
-  while (counter < 10) {
+  while (true) {
     record = ((await cursor.next()) ?? null) as QuranEmbeddingParquetRow;
     const ayat = Number(record?.Ayah ?? 0);
     const surahNumber = Number(record?.Surah ?? 1);
@@ -61,6 +59,11 @@ const main = async () => {
     const surahData = SURAHS[record.Surah];
     const absoluteAyat = surahData.start + ayat - 1;
     const quranArabic = QURANARABIC[surahNumber - 1].ayat[ayat - 1].text;
+
+    if (absoluteAyat < 6236) {
+      progressBar.update(absoluteAyat);
+      continue;
+    }
 
     const embeddingsResponse = await openai.embeddings.create({
       model: "text-embedding-3-small",
@@ -92,8 +95,7 @@ const main = async () => {
     );
 
     upsertQuranAyat(quranMetadata, embeddingValue, pinecone);
-    counter++;
-    progressBar.update(counter);
+    progressBar.update(absoluteAyat);
   }
 
   await reader.close();

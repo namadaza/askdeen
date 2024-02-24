@@ -24,6 +24,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { TableQuranMetadata } from '@askdeen/core/quranEmbeddings'
 import { SURAHS } from '@askdeen/core/lib/surah'
 import { uniqueById } from '@askdeen/core/lib/utils'
+import { ChatCompletionMessageParam } from 'openai/resources'
 
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview'
 export interface ChatProps extends React.ComponentProps<'div'> {
@@ -74,22 +75,33 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
     console.log('am I loading?', isLoading, 'appendedRag', appendedRag)
     if (data?.length && !isLoading && !appendedRag) {
       console.log('isLoading', isLoading, 'appendedRag', appendedRag)
-      const ragAyatMessages: Message[] = (
-        data?.[0] as TableQuranMetadata[]
-      ).map(ayat => ({
-        id: `${ayat.surah}-${ayat.ayat}`,
+      let ragAyatMessageId: string = 'ayat'
+      let ragAyatMessage: string = ''
+
+      for (const ayat of data?.[data.length - 1] as TableQuranMetadata[]) {
+        ragAyatMessageId += `#${ayat.surah}:${ayat.ayat}`
+        ragAyatMessage += `#### Surah ${ayat.surah}:${ayat.ayat} | ${SURAHS[String(ayat.surah ?? 1)].name} 
+          \n${ayat.englishText}
+          \n${ayat.arabicText}
+          \n`
+      }
+
+      const ragAyatChatMessage: Message = {
+        id: ragAyatMessageId,
         role: 'assistant',
-        content: `
-          ${ayat.englishText} 
-          ${ayat.arabicText} 
-          **Surah ${SURAHS[String(ayat.surah ?? 1)].name}, ${ayat.surah}:${ayat.ayat}**
-        `
-      }))
-      setMessages(uniqueById([...messages, ...ragAyatMessages]))
-      console.log('ragAyatMessages', ragAyatMessages)
-      setAppendedRag(true)
+        content: ragAyatMessage
+      }
+
+      if (!messages.find(message => message.id === ragAyatMessageId)) {
+        setMessages([...messages, ragAyatChatMessage])
+        console.log('ragAyatMessages', ragAyatChatMessage)
+        setAppendedRag(true)
+      }
     }
   }, [data, messages, setMessages, data?.length, isLoading, appendedRag])
+
+  console.log('data', data)
+  console.log('messages', messages)
 
   useEffect(() => {
     setAppendedRag(false)
