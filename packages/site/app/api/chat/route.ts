@@ -4,7 +4,6 @@ import {
   experimental_StreamData
 } from 'ai'
 import OpenAI from 'openai'
-import { Config } from 'sst/node/config'
 import { auth } from '@/auth'
 import { getMatchingAyatRAG } from '@askdeen/core/quranEmbeddings'
 import { nanoid } from '@/lib/utils'
@@ -14,11 +13,11 @@ import { compact } from '@askdeen/core/lib/utils'
 import { Pinecone } from '@pinecone-database/pinecone'
 
 const openai = new OpenAI({
-  apiKey: Config.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY ?? ''
 })
 
 const pinecone = new Pinecone({
-  apiKey: Config.PINECONE_API_KEY
+  apiKey: process.env.PINECONE_API_KEY ?? ''
 })
 
 const systemMessageStart: ChatCompletionMessageParam = {
@@ -35,7 +34,8 @@ export async function POST(req: Request) {
   const json = await req.json()
   const { messages } = json as { messages: ChatCompletionMessageParam[] }
 
-  const userId = (await auth())?.user.id
+  const authResponse = await auth()
+  const userId = authResponse?.user.id
 
   if (!userId) {
     return new Response('Unauthorized', {
@@ -47,7 +47,6 @@ export async function POST(req: Request) {
     message => message.role === 'user'
   )
 
-  console.log('latestUserResponseIndex', latestUserResponseIndex)
   if (latestUserResponseIndex === -1) {
     return new Response('Bad Request', {
       status: 400
@@ -55,7 +54,6 @@ export async function POST(req: Request) {
   }
   const latestUserResponse = (messages[latestUserResponseIndex].content ??
     '') as string
-  console.log('latestUserResponse', latestUserResponse)
 
   // RAG
   const embeddingsResponse = await openai.embeddings.create({
@@ -84,9 +82,6 @@ export async function POST(req: Request) {
     `
   }
   messages[latestUserResponseIndex].content = userPrompt
-
-  console.log('userPrompt', userPrompt)
-  console.log('messages', JSON.stringify(messages, null, 2))
 
   // OpenAI response + streaming
   const res = await openai.chat.completions.create({

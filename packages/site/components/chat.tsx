@@ -20,21 +20,23 @@ import { useEffect, useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { toast } from 'react-hot-toast'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { TableQuranMetadata } from '@askdeen/core/quranEmbeddings'
 import { SURAHS } from '@askdeen/core/lib/surah'
-import { uniqueById } from '@askdeen/core/lib/utils'
-import { ChatCompletionMessageParam } from 'openai/resources'
+import { getChats, saveChat } from '@/app/actions'
+import { useAtom } from 'jotai'
+import { chatsAtom } from '@/lib/joatiAtoms'
 
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview'
 export interface ChatProps extends React.ComponentProps<'div'> {
   initialMessages?: Message[]
   id?: string
+  userId?: string
 }
 
-export function Chat({ id, initialMessages, className }: ChatProps) {
-  const router = useRouter()
+export function Chat({ id, initialMessages, className, userId }: ChatProps) {
   const path = usePathname()
+
   const [previewToken, setPreviewToken] = useLocalStorage<string | null>(
     'ai-token',
     null
@@ -42,6 +44,9 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
   const [appendedRag, setAppendedRag] = useState(false)
   const [previewTokenDialog, setPreviewTokenDialog] = useState(IS_PREVIEW)
   const [previewTokenInput, setPreviewTokenInput] = useState(previewToken ?? '')
+
+  const [, setChats] = useAtom(chatsAtom)
+
   const {
     messages,
     append,
@@ -72,9 +77,16 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
   })
 
   useEffect(() => {
-    console.log('am I loading?', isLoading, 'appendedRag', appendedRag)
+    const updateChats = async () => {
+      if (!userId) {
+        return
+      }
+      const latestChats = await getChats(userId)
+
+      setChats(latestChats)
+    }
+
     if (data?.length && !isLoading && !appendedRag) {
-      console.log('isLoading', isLoading, 'appendedRag', appendedRag)
       let ragAyatMessageId: string = 'ayat'
       let ragAyatMessage: string = ''
 
@@ -94,15 +106,27 @@ export function Chat({ id, initialMessages, className }: ChatProps) {
 
       if (!messages.find(message => message.id === ragAyatMessageId)) {
         setMessages([...messages, ragAyatChatMessage])
-        console.log('ragAyatMessages', ragAyatChatMessage)
         setAppendedRag(true)
       }
+
+      if (id) {
+        saveChat({
+          id: id,
+          messages
+        }).then(() => updateChats())
+      }
     }
-  }, [data, messages, setMessages, data?.length, isLoading, appendedRag])
-
-  console.log('data', data)
-  console.log('messages', messages)
-
+  }, [
+    data,
+    messages,
+    setMessages,
+    data?.length,
+    isLoading,
+    appendedRag,
+    id,
+    setChats,
+    userId
+  ])
   useEffect(() => {
     setAppendedRag(false)
   }, [isLoading, setAppendedRag])

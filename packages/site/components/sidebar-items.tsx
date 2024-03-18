@@ -1,18 +1,29 @@
 'use client'
 
-import { Chat } from '@/lib/types'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { removeChat, shareChat } from '@/app/actions'
 
 import { SidebarActions } from '@/components/sidebar-actions'
 import { SidebarItem } from '@/components/sidebar-item'
+import { TableAskDeenChat } from '@askdeen/core/askDeen'
+import { useEffect } from 'react'
+import { useAtom } from 'jotai'
+import { chatsAtom } from '@/lib/joatiAtoms'
 
 interface SidebarItemsProps {
-  chats?: Chat[]
+  chats?: TableAskDeenChat[]
 }
 
-export function SidebarItems({ chats }: SidebarItemsProps) {
+export function SidebarItems({ chats: chatsParam }: SidebarItemsProps) {
+  const [chats, setChats] = useAtom(chatsAtom)
+
+  useEffect(() => {
+    if (chatsParam) {
+      setChats(chatsParam)
+    }
+  }, [chatsParam, setChats])
+
   if (!chats?.length) return null
 
   return (

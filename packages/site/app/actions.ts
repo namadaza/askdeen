@@ -1,80 +1,100 @@
 'use server'
-
+import { DynamoDB, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
+import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import {
+  TableAskDeenAccessPatterns,
+  TableAskDeenChat,
+  deleteChatById,
+  deleteChatsByUserId,
+  getChatById,
+  getChatsByUserId,
+  putChat
+} from '@askdeen/core/askDeen'
 
 import { auth } from '@/auth'
-import { type Chat } from '@/lib/types'
 
-// TODO replace with dynamodb
+const config: DynamoDBClientConfig = {
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? ''
+  },
+  region: 'us-east-1'
+}
 
-export async function getChats(userId?: string | null) {
+const dbClient = DynamoDBDocument.from(new DynamoDB(config), {
+  marshallOptions: {
+    convertEmptyValues: true,
+    removeUndefinedValues: true,
+    convertClassInstanceToMap: true
+  }
+})
+
+export async function getChats(
+  userId?: string | null
+): Promise<TableAskDeenChat[]> {
   if (!userId) {
     return []
   }
 
-  /*
   try {
-    const pipeline = kv.pipeline()
-    const chats: string[] = await kv.zrange(`user:chat:${userId}`, 0, -1, {
-      rev: true
-    })
-
-    for (const chat of chats) {
-      pipeline.hgetall(chat)
-    }
-
-    const results = await pipeline.exec()
-
-    return results as Chat[]
+    const chats: TableAskDeenChat[] = await getChatsByUserId(userId, dbClient)
+    return chats
   } catch (error) {
     return []
   }
-  */
-  return []
 }
 
-export async function getChat(id: string, userId: string) {
-  /*
-  const chat = await kv.hgetall<Chat>(`chat:${id}`)
+export async function getChat(
+  id: string,
+  userId: string
+): Promise<TableAskDeenChat | null> {
+  const chat = await getChatById(id, userId, dbClient)
 
   if (!chat || (userId && chat.userId !== userId)) {
     return null
   }
 
   return chat
-  */
-  return null
 }
 
-export async function removeChat({ id, path }: { id: string; path: string }) {
+export async function saveChat(
+  chat: Pick<TableAskDeenChat, 'id' | 'messages'>
+): Promise<TableAskDeenChat | { error: 'Unauthorized' }> {
   const session = await auth()
+  const userId = session?.user?.id
 
-  if (!session) {
+  if (!userId) {
     return {
       error: 'Unauthorized'
     }
   }
 
-  /*
-  const uid = await kv.hget<string>(`chat:${id}`, 'userId')
+  const existingChat = await getChatById(chat.id, userId, dbClient)
 
-  if (uid !== session?.user?.id) {
-    return {
-      error: 'Unauthorized'
-    }
+  const chatWithUserId: TableAskDeenChat = {
+    ...chat,
+    ...TableAskDeenAccessPatterns.chatById(chat.id, userId),
+    path: `/chat/${chat.id}`,
+    title: existingChat?.title ?? chat.messages[0].content.substring(0, 100),
+    userId: session.user.id,
+    createdAt: existingChat?.createdAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 
-  await kv.del(`chat:${id}`)
-  await kv.zrem(`user:chat:${session.user.id}`, `chat:${id}`)
+  await putChat(chatWithUserId, dbClient)
 
-  revalidatePath('/')
-  return revalidatePath(path)
-  */
-  return redirect('/')
+  return chatWithUserId
 }
 
-export async function clearChats() {
+export async function removeChat({
+  id,
+  path
+}: {
+  id: string
+  path: string
+}): Promise<void | { error: 'Unauthorized' }> {
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -83,39 +103,46 @@ export async function clearChats() {
     }
   }
 
-  /*
-  const chats: string[] = await kv.zrange(`user:chat:${session.user.id}`, 0, -1)
-  if (!chats.length) {
-    return redirect('/')
-  }
-  const pipeline = kv.pipeline()
-
-  for (const chat of chats) {
-    pipeline.del(chat)
-    pipeline.zrem(`user:chat:${session.user.id}`, chat)
-  }
-
-  await pipeline.exec()
-
+  await deleteChatById(id, session.user.id, dbClient)
   revalidatePath('/')
-  */
+  return revalidatePath(path)
+}
+
+export async function clearChats(): Promise<void | { error: 'Unauthorized' }> {
+  const session = await auth()
+
+  if (!session?.user?.id) {
+    return {
+      error: 'Unauthorized'
+    }
+  }
+
+  await deleteChatsByUserId(session.user.id, dbClient)
+  revalidatePath('/')
   return redirect('/')
 }
 
-export async function getSharedChat(id: string) {
-  /*
-  const chat = await kv.hgetall<Chat>(`chat:${id}`)
+export async function getSharedChat(
+  id: string
+): Promise<TableAskDeenChat | null> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return null
+  }
+  const chat = await getChatById(id, session.user.id, dbClient)
 
   if (!chat || !chat.sharePath) {
     return null
   }
 
   return chat
-    */
-  return null
 }
 
-export async function shareChat(id: string) {
+export async function shareChat(
+  id: string
+): Promise<
+  TableAskDeenChat | { error: 'Unauthorized' | 'Something went wrong' }
+> {
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -124,8 +151,7 @@ export async function shareChat(id: string) {
     }
   }
 
-  /*
-  const chat = await kv.hgetall<Chat>(`chat:${id}`)
+  const chat = await getChatById(id, session.user.id, dbClient)
 
   if (!chat || chat.userId !== session.user.id) {
     return {
@@ -133,14 +159,12 @@ export async function shareChat(id: string) {
     }
   }
 
-  const payload = {
+  const chatWithSharePath: TableAskDeenChat = {
     ...chat,
     sharePath: `/share/${chat.id}`
   }
 
-  await kv.hmset(`chat:${chat.id}`, payload)
+  await putChat(chatWithSharePath, dbClient)
 
-  return payload
-    */
-  return {}
+  return chatWithSharePath
 }
