@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import * as React from 'react'
 import { toast } from 'react-hot-toast'
 
-import { ServerActionResult, type Chat } from '@/lib/types'
+import { ServerActionResult } from '@/lib/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,11 +23,12 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+import { TableAskDeenChat } from '@askdeen/core/askDeen'
 
 interface SidebarActionsProps {
-  chat: Chat
+  chat: TableAskDeenChat
   removeChat: (args: { id: string; path: string }) => ServerActionResult<void>
-  shareChat: (id: string) => ServerActionResult<Chat>
+  shareChat: (id: string) => ServerActionResult<TableAskDeenChat>
 }
 
 export function SidebarActions({
