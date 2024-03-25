@@ -63,7 +63,7 @@ export const upsertQuranAyat = async (
 
 export const getMatchingAyatRAG = async ({
   embeddingValue,
-  numberOfResults = 3,
+  numberOfResults = 2,
   pinecone,
 }: {
   embeddingValue: number[];

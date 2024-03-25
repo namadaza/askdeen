@@ -33,3 +33,10 @@ Runs with above command `pnpm sst dev`
 ## SST Console
 
 [View SST logs](https://console.sst.dev/canogadigital-dev)
+
+## Paid Services
+
+- AWS
+- PineconeDB
+- Vercel
+- OpenAI

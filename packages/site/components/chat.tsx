@@ -26,6 +26,7 @@ import { SURAHS } from '@askdeen/core/lib/surah'
 import { getChats, saveChat } from '@/app/actions'
 import { useAtom } from 'jotai'
 import { chatsAtom } from '@/lib/joatiAtoms'
+import { TableHadithMetadata } from '@askdeen/core/hadithEmbeddings'
 
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview'
 export interface ChatProps extends React.ComponentProps<'div'> {
@@ -86,35 +87,59 @@ export function Chat({ id, initialMessages, className, userId }: ChatProps) {
       setChats(latestChats)
     }
 
-    if (data?.length && !isLoading && !appendedRag) {
-      let ragAyatMessageId: string = 'ayat'
-      let ragAyatMessage: string = ''
+    // Partition the data into hadith and ayat
+    const ayatData = (data?.[data.length - 2] ?? []) as TableQuranMetadata[]
+    const hadithData = (data?.[data.length - 1] ?? []) as TableHadithMetadata[]
 
-      for (const ayat of data?.[data.length - 1] as TableQuranMetadata[]) {
-        ragAyatMessageId += `#${ayat.surah}:${ayat.ayat}`
-        ragAyatMessage += `#### Surah ${ayat.surah}:${ayat.ayat} | ${SURAHS[String(ayat.surah ?? 1)].name} 
+    if (!data?.length || isLoading || appendedRag) {
+      return
+    }
+
+    let ragAyatMessageId: string = 'ayat'
+    let ragAyatMessage: string = ''
+
+    let ragHadithMessageId: string = 'hadith'
+    let ragHadithMessage: string = ''
+
+    for (const ayat of ayatData) {
+      ragAyatMessageId += `#${ayat.surah}:${ayat.ayat}`
+      ragAyatMessage += `#### Surah ${ayat.surah}:${ayat.ayat} | ${SURAHS[String(ayat.surah ?? 1)].name} 
           \n${ayat.englishText}
           \n${ayat.arabicText}
           \n`
-      }
+    }
 
-      const ragAyatChatMessage: Message = {
-        id: ragAyatMessageId,
-        role: 'assistant',
-        content: ragAyatMessage
-      }
+    for (const hadith of hadithData) {
+      ragHadithMessageId += `#${hadith.index}`
+      ragHadithMessage += `#### ${hadith.chapterEnglish}, Chapter ${hadith.chapterNumber} | Section ${hadith.sectionNumber || 'N/A'} | Hadith ${hadith.hadithNumber}
+          \n${hadith.englishHadith}
+          \n${hadith.arabicHadith}
+          \n_Grade ${hadith.arabicGrade} (${hadith.englishGrade})_
+          \n`
+    }
 
-      if (!messages.find(message => message.id === ragAyatMessageId)) {
-        setMessages([...messages, ragAyatChatMessage])
-        setAppendedRag(true)
-      }
+    const ragAyatChatMessage: Message = {
+      id: ragAyatMessageId,
+      role: 'assistant',
+      content: ragAyatMessage
+    }
 
-      if (id) {
-        saveChat({
-          id: id,
-          messages
-        }).then(() => updateChats())
-      }
+    const ragHadithChatMessage: Message = {
+      id: ragHadithMessageId,
+      role: 'assistant',
+      content: ragHadithMessage
+    }
+
+    if (!messages.find(message => message.id === ragAyatMessageId)) {
+      setMessages([...messages, ragAyatChatMessage, ragHadithChatMessage])
+      setAppendedRag(true)
+    }
+
+    if (id) {
+      saveChat({
+        id: id,
+        messages
+      }).then(() => updateChats())
     }
   }, [
     data,

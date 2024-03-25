@@ -6,6 +6,7 @@ import {
 import OpenAI from 'openai'
 import { auth } from '@/auth'
 import { getMatchingAyatRAG } from '@askdeen/core/quranEmbeddings'
+import { getMatchingHadithRAG } from '@askdeen/core/hadithEmbeddings'
 import { nanoid } from '@/lib/utils'
 import { ChatCompletionMessageParam } from 'openai/resources'
 import { SURAHS } from '@askdeen/core/lib/surah'
@@ -64,15 +65,24 @@ export async function POST(req: Request) {
   })
   const embeddingValue = embeddingsResponse?.data?.[0]?.embedding ?? []
   const matchingAyat = await getMatchingAyatRAG({ embeddingValue, pinecone })
+  const matchingHadith = await getMatchingHadithRAG({
+    embeddingValue,
+    pinecone
+  })
 
   // Append matching ayat to the user's response
   const compactMatchingAyat = compact(
     (matchingAyat?.matches ?? []).map(ayat => ayat.metadata)
   )
+  const compactMatchingHadith = compact(
+    (matchingHadith?.matches ?? []).map(hadith => hadith.metadata)
+  )
+
   let userPrompt: string = latestUserResponse
   userPrompt += `
-    Here are some relevant ayat from the Quran for context, give me an analysis for my question above and the following ayat:
+    Here are some relevant ayat from the Quran and hadith for context give me an analysis for my question above and the following ayat:
   `
+
   for (const ayat of compactMatchingAyat) {
     userPrompt += `
       ${ayat.englishText} 
@@ -81,18 +91,28 @@ export async function POST(req: Request) {
 
     `
   }
+
+  for (const hadith of compactMatchingHadith) {
+    userPrompt += `
+      ${hadith.englishHadith} 
+      ${hadith.arabicHadith} 
+      This comes from ${hadith.chapterEnglish}, section ${hadith.sectionEnglish}, hadith ${hadith.hadithNumber}
+    `
+  }
   messages[latestUserResponseIndex].content = userPrompt
 
   // OpenAI response + streaming
+  const truncatedMessages = messages.slice(-3)
   const res = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
-    messages: [systemMessageStart, ...messages],
+    messages: [systemMessageStart, ...truncatedMessages],
     temperature: 0.7,
     stream: true
   })
 
   const data = new experimental_StreamData()
   data.append(compactMatchingAyat)
+  data.append(compactMatchingHadith)
 
   const stream = OpenAIStream(res, {
     async onCompletion(completion) {
