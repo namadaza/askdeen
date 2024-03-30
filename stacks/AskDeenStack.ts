@@ -8,6 +8,7 @@ export function AskDeenStack({ stack }: StackContext) {
       sk: "string",
       GSI1PK: "string",
       GSI1SK: "string",
+      updatedAt: "string",
     },
     primaryIndex: { partitionKey: "pk", sortKey: "sk" },
     globalIndexes: {

@@ -18,6 +18,8 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
 import { IconSpinner } from '@/components/ui/icons'
+import { chatsAtom } from '@/lib/joatiAtoms'
+import { useAtom } from 'jotai'
 
 interface ClearHistoryProps {
   isEnabled: boolean
@@ -29,6 +31,7 @@ export function ClearHistory({
   clearChats
 }: ClearHistoryProps) {
   const [open, setOpen] = React.useState(false)
+  const [, setChats] = useAtom(chatsAtom)
   const [isPending, startTransition] = React.useTransition()
   const router = useRouter()
 
@@ -61,6 +64,7 @@ export function ClearHistory({
                     return
                   }
 
+                  setChats([])
                   setOpen(false)
                   router.push('/')
                 })

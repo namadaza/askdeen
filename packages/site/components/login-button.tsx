@@ -5,9 +5,14 @@ import { signIn } from 'next-auth/react'
 
 import { cn } from '@/lib/utils'
 import { Button, type ButtonProps } from '@/components/ui/button'
-import { IconGitHub, IconSpinner } from '@/components/ui/icons'
+import {
+  IconFacebook,
+  IconGitHub,
+  IconGoogle,
+  IconSpinner
+} from '@/components/ui/icons'
 
-type Provider = 'github'
+type Provider = 'github' | 'facebook' | 'google'
 
 interface LoginButtonProps extends ButtonProps {
   showIcon?: boolean
@@ -16,7 +21,6 @@ interface LoginButtonProps extends ButtonProps {
 }
 
 export function LoginButton({
-  text = 'Login with GitHub',
   showIcon = true,
   className,
   provider = 'github',
@@ -25,9 +29,19 @@ export function LoginButton({
   const [isLoading, setIsLoading] = React.useState(false)
 
   let iconElement = null
+  let text = 'Login with '
   switch (provider) {
     case 'github':
       iconElement = <IconGitHub className="mr-2" />
+      text += 'GitHub'
+      break
+    case 'google':
+      iconElement = <IconGoogle className="mr-2" width={24} />
+      text += 'Google'
+      break
+    case 'facebook':
+      iconElement = <IconFacebook className="mr-2" width={24} />
+      text += 'Facebook'
       break
     case null:
       iconElement = null
@@ -42,10 +56,10 @@ export function LoginButton({
       onClick={() => {
         setIsLoading(true)
         // next-auth signIn() function doesn't work yet at Edge Runtime due to usage of BroadcastChannel
-        signIn('github', { callbackUrl: `/` })
+        signIn(provider, { callbackUrl: `/` })
       }}
       disabled={isLoading}
-      className={cn(className)}
+      className={cn('w-80', className)}
       {...props}
     >
       {isLoading ? (

@@ -2,6 +2,8 @@ import { DynamoDB, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb'
 import NextAuth, { type DefaultSession } from 'next-auth'
 import GitHub from 'next-auth/providers/github'
+import Facebook from 'next-auth/providers/facebook'
+import Google from 'next-auth/providers/google'
 import { DynamoDBAdapter } from '@next-auth/dynamodb-adapter'
 
 const config: DynamoDBClientConfig = {
@@ -33,7 +35,17 @@ export const {
   handlers: { GET, POST },
   auth
 } = NextAuth({
-  providers: [GitHub],
+  providers: [
+    GitHub,
+    Facebook({
+      clientId: process.env.AUTH_FACEBOOK_APP_ID,
+      clientSecret: process.env.AUTH_FACEBOOK_APP_SECRET
+    }),
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET
+    })
+  ],
   callbacks: {
     jwt({ token, profile }) {
       if (profile) {
@@ -51,7 +63,11 @@ export const {
       }
       return session
     },
-    authorized({ auth }) {
+    authorized({ request, auth }) {
+      // Ignore if user going to share route
+      if (request.url.includes('/share')) {
+        return true
+      }
       return !!auth?.user // this ensures there is a logged in user for -every- request
     }
   },

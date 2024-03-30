@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils'
 import { auth } from '@/auth'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
-  IconGitHub,
+  IconAskDeen,
+  IconCanogaDigital,
   IconNextChat,
-  IconSeparator,
-  IconVercel
+  IconSeparator
 } from '@/components/ui/icons'
 import { UserMenu } from '@/components/user-menu'
 import { SidebarMobile } from './sidebar-mobile'
@@ -26,14 +26,11 @@ async function UserOrLogin() {
           </SidebarMobile>
           <SidebarToggle />
         </>
-      ) : (
-        <Link href="/" target="_blank" rel="nofollow">
-          <IconNextChat className="size-6 mr-2 dark:hidden" inverted />
-          <IconNextChat className="hidden size-6 mr-2 dark:block" />
-        </Link>
-      )}
+      ) : null}
       <div className="flex items-center">
-        <IconSeparator className="size-6 text-muted-foreground/50" />
+        {session?.user && (
+          <IconSeparator className="size-6 text-muted-foreground/50" />
+        )}
         {session?.user ? (
           <UserMenu user={session.user} />
         ) : (
@@ -55,23 +52,17 @@ export function Header() {
         </React.Suspense>
       </div>
       <div className="flex items-center justify-end space-x-2">
-        <a
-          target="_blank"
-          href="https://github.com/vercel/nextjs-ai-chatbot/"
-          rel="noopener noreferrer"
-          className={cn(buttonVariants({ variant: 'outline' }))}
-        >
-          <IconGitHub />
-          <span className="hidden ml-2 md:flex">GitHub</span>
+        <a href="/">
+          <IconAskDeen width={48} height="auto" />
         </a>
         <a
-          href="https://github.com/vercel/nextjs-ai-chatbot/"
+          href="https://canogadigital.com"
           target="_blank"
           className={cn(buttonVariants())}
         >
-          <IconVercel className="mr-2" />
-          <span className="hidden sm:block">Deploy to Vercel</span>
-          <span className="sm:hidden">Deploy</span>
+          <span className="hidden sm:block mr-2">Built by</span>
+          <span className="sm:hidden">Built by mr-2</span>
+          <IconCanogaDigital width={48} height={48} />
         </a>
       </div>
     </header>

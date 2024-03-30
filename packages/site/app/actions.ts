@@ -72,15 +72,20 @@ export async function saveChat(
   }
 
   const existingChat = await getChatById(chat.id, userId, dbClient)
+  const updatedAt = new Date().toISOString()
+  const { pk, sk } = TableAskDeenAccessPatterns.chatById(chat.id, userId)
 
   const chatWithUserId: TableAskDeenChat = {
     ...chat,
-    ...TableAskDeenAccessPatterns.chatById(chat.id, userId),
+    pk,
+    sk,
+    GSI1PK: sk,
+    GSI1SK: updatedAt,
     path: `/chat/${chat.id}`,
     title: existingChat?.title ?? chat.messages[0].content.substring(0, 100),
     userId: session.user.id,
     createdAt: existingChat?.createdAt ?? new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt
   }
 
   await putChat(chatWithUserId, dbClient)
@@ -125,11 +130,7 @@ export async function clearChats(): Promise<void | { error: 'Unauthorized' }> {
 export async function getSharedChat(
   id: string
 ): Promise<TableAskDeenChat | null> {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return null
-  }
-  const chat = await getChatById(id, session.user.id, dbClient)
+  const chat = await getChatById(id, undefined, dbClient)
 
   if (!chat || !chat.sharePath) {
     return null

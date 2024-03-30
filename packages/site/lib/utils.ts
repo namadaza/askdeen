@@ -41,3 +41,6 @@ export function formatDate(input: string | number | Date): string {
     year: 'numeric'
   })
 }
+
+export const cdn = (src: string) =>
+  `https://d2mj9jgudwb1pj.cloudfront.net/askdeen${src}`

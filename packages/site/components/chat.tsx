@@ -83,8 +83,7 @@ export function Chat({ id, initialMessages, className, userId }: ChatProps) {
         return
       }
       const latestChats = await getChats(userId)
-
-      setChats(latestChats)
+      setChats([...latestChats])
     }
 
     // Partition the data into hadith and ayat
@@ -103,7 +102,7 @@ export function Chat({ id, initialMessages, className, userId }: ChatProps) {
 
     for (const ayat of ayatData) {
       ragAyatMessageId += `#${ayat.surah}:${ayat.ayat}`
-      ragAyatMessage += `#### Surah ${ayat.surah}:${ayat.ayat} | ${SURAHS[String(ayat.surah ?? 1)].name} 
+      ragAyatMessage += `#### [Surah ${ayat.surah}:${ayat.ayat} | ${SURAHS[String(ayat.surah ?? 1)].name}](https://quran.com/${ayat.surah}/${ayat.ayat}) 
           \n${ayat.englishText}
           \n${ayat.arabicText}
           \n`
@@ -111,7 +110,15 @@ export function Chat({ id, initialMessages, className, userId }: ChatProps) {
 
     for (const hadith of hadithData) {
       ragHadithMessageId += `#${hadith.index}`
-      ragHadithMessage += `#### ${hadith.chapterEnglish}, Chapter ${hadith.chapterNumber} | Section ${hadith.sectionNumber || 'N/A'} | Hadith ${hadith.hadithNumber}
+
+      const truncateAmount = -500
+      const truncatedArabicHadith = encodeURIComponent(
+        hadith.arabicHadith.length > truncateAmount
+          ? hadith.arabicHadith.slice(truncateAmount) + '...'
+          : hadith.arabicHadith
+      )
+      const hadithSunnahComUrl = `https://sunnah.com/search?q=${truncatedArabicHadith}`
+      ragHadithMessage += `#### [${hadith.chapterEnglish}, Chapter ${hadith.chapterNumber} | Section ${hadith.sectionNumber || 'N/A'} | Hadith ${hadith.hadithNumber}](${hadithSunnahComUrl})
           \n${hadith.englishHadith}
           \n${hadith.arabicHadith}
           \n_Grade ${hadith.arabicGrade} (${hadith.englishGrade})_

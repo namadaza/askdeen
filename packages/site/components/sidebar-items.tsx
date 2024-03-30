@@ -24,30 +24,40 @@ export function SidebarItems({ chats: chatsParam }: SidebarItemsProps) {
     }
   }, [chatsParam, setChats])
 
-  if (!chats?.length) return null
+  if (!chats?.length) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm text-muted-foreground">No chat history</p>
+      </div>
+    )
+  }
 
   return (
-    <AnimatePresence>
-      {chats.map(
-        (chat, index) =>
-          chat && (
-            <motion.div
-              key={chat?.id}
-              exit={{
-                opacity: 0,
-                height: 0
-              }}
-            >
-              <SidebarItem index={index} chat={chat}>
-                <SidebarActions
-                  chat={chat}
-                  removeChat={removeChat}
-                  shareChat={shareChat}
-                />
-              </SidebarItem>
-            </motion.div>
-          )
-      )}
-    </AnimatePresence>
+    <div className="space-y-2 px-2">
+      <AnimatePresence>
+        {chats.map(
+          (chat, index) =>
+            chat && (
+              <motion.div
+                key={chat?.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{
+                  opacity: 0,
+                  height: 0
+                }}
+              >
+                <SidebarItem index={index} chat={chat}>
+                  <SidebarActions
+                    chat={chat}
+                    removeChat={removeChat}
+                    shareChat={shareChat}
+                  />
+                </SidebarItem>
+              </motion.div>
+            )
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

@@ -17,13 +17,13 @@ export const TableAskDeenAccessPatterns = {
     pk: `USER#${userId}`,
     sk: `USER#${userId}`,
   }),
-  chatById: (chatId: string, userId: string) => ({
-    pk: `CHAT#${userId}`,
-    sk: `CHAT#${chatId}`,
+  chatById: (chatId: string, userId?: string) => ({
+    pk: `CHAT#${chatId}`,
+    sk: `CHAT#${userId || ""}`,
   }),
   chatsByUserId: (userId: string) => ({
-    pk: `CHAT#${userId}`,
-    sk: `CHAT#`,
+    pk: `CHAT#`,
+    sk: `CHAT#${userId}`,
   }),
 };
 
@@ -44,6 +44,8 @@ export interface TableAskDeenChat extends TableRequiredSchema {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  GSI1PK?: string;
+  GSI1SK?: string;
 }
 
 export type TableAskDeen = TableAskDeenUser | TableAskDeenChat;
@@ -66,9 +68,27 @@ export const getUserById = async (
 
 export const getChatById = async (
   chatId: string,
-  userId: string,
+  userId?: string,
   dbClientParam?: DynamoDBClientParam,
 ): Promise<TableAskDeenChat | undefined> => {
+  if (!userId) {
+    const params: QueryCommandInput = {
+      TableName: tableName,
+      KeyConditionExpression: "pk = :pk",
+      ExpressionAttributeValues: {
+        ":pk": TableAskDeenAccessPatterns.chatById(chatId).pk,
+      },
+    };
+
+    try {
+      const response = await (dbClientParam ?? dbClient).query(params);
+      return response.Items?.[0] as TableAskDeenChat | undefined;
+    } catch (error) {
+      console.error("getChatById error", error);
+      return undefined;
+    }
+  }
+
   const params: GetCommandInput = {
     TableName: tableName,
     Key: TableAskDeenAccessPatterns.chatById(chatId, userId),
@@ -78,6 +98,7 @@ export const getChatById = async (
     const response = await (dbClientParam ?? dbClient).get(params);
     return response.Item as TableAskDeenChat | undefined;
   } catch (error) {
+    console.error("getChatById error", error);
     return undefined;
   }
 };
@@ -87,17 +108,23 @@ export const getChatsByUserId = async (
   dbClientParam?: DynamoDBClientParam,
 ): Promise<TableAskDeenChat[]> => {
   const params: QueryCommandInput = {
-    TableName: tableName,
-    KeyConditionExpression: "pk = :pk AND begins_with(sk,:sk)",
+    ExpressionAttributeNames: { "#kn0": "GSI1PK" },
     ExpressionAttributeValues: {
-      ":pk": TableAskDeenAccessPatterns.chatsByUserId(userId).pk,
-      ":sk": TableAskDeenAccessPatterns.chatsByUserId(userId).sk,
+      ":kv0": TableAskDeenAccessPatterns.chatsByUserId(userId).sk,
     },
+    IndexName: "GSI1",
+    KeyConditionExpression: "#kn0 = :kv0",
     ScanIndexForward: false,
+    TableName: tableName,
   };
-  const response = await (dbClientParam ?? dbClient).query(params);
 
-  return response.Items as TableAskDeenChat[];
+  try {
+    const response = await (dbClientParam ?? dbClient).query(params);
+    return response.Items as TableAskDeenChat[];
+  } catch (error) {
+    console.error("getChatsByUserId error", error);
+    return [];
+  }
 };
 
 export const deleteChatById = async (
