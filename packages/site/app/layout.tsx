@@ -8,18 +8,31 @@ import { TailwindIndicator } from '@/components/tailwind-indicator'
 import { Providers } from '@/components/providers'
 import { Header } from '@/components/header'
 
+const title = 'AskDeen - Muslim AI Chatbot'
+const description =
+  'An AI-powered muslim chatbot. Ask me any questions and I will respond with the most accurate Quran and Hadith references.'
+
 export const metadata = {
   metadataBase: new URL(`https://${process.env.VERCEL_URL}`),
   title: {
-    default: 'AskDeen - Muslim AI Chatbot',
+    default: title,
     template: `%s - AskDeen AI Chatbot`
   },
-  description:
-    'An AI-powered muslim chatbot. Ask me any questions and I will respond with the most accurate Quran and Hadith references.',
+  description,
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png'
+  },
+  openGraph: {
+    title,
+    description,
+    images: ['/splash.png']
+  },
+  twitter: {
+    title,
+    description,
+    images: ['/splash.png']
   }
 }
 

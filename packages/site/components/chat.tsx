@@ -27,6 +27,7 @@ import { getChats, saveChat } from '@/app/actions'
 import { useAtom } from 'jotai'
 import { chatsAtom } from '@/lib/joatiAtoms'
 import { TableHadithMetadata } from '@askdeen/core/hadithEmbeddings'
+import { nanoid } from '@/lib/utils'
 
 const IS_PREVIEW = process.env.VERCEL_ENV === 'preview'
 export interface ChatProps extends React.ComponentProps<'div'> {
@@ -35,8 +36,14 @@ export interface ChatProps extends React.ComponentProps<'div'> {
   userId?: string
 }
 
-export function Chat({ id, initialMessages, className, userId }: ChatProps) {
+export function Chat({
+  id: initialId,
+  initialMessages,
+  className,
+  userId
+}: ChatProps) {
   const path = usePathname()
+  const [id, setId] = useState(initialId)
 
   const [previewToken, setPreviewToken] = useLocalStorage<string | null>(
     'ai-token',
@@ -162,6 +169,13 @@ export function Chat({ id, initialMessages, className, userId }: ChatProps) {
   useEffect(() => {
     setAppendedRag(false)
   }, [isLoading, setAppendedRag])
+
+  // Generate a new id if the path changes to homepage
+  useEffect(() => {
+    if (path === '/') {
+      setId(nanoid())
+    }
+  }, [path, setId])
 
   return (
     <>
