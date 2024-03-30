@@ -39,11 +39,13 @@ export const {
     GitHub,
     Facebook({
       clientId: process.env.AUTH_FACEBOOK_APP_ID,
-      clientSecret: process.env.AUTH_FACEBOOK_APP_SECRET
+      clientSecret: process.env.AUTH_FACEBOOK_APP_SECRET,
+      allowDangerousEmailAccountLinking: true
     }),
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      allowDangerousEmailAccountLinking: true
     })
   ],
   callbacks: {
