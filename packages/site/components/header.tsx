@@ -61,7 +61,6 @@ export function Header() {
           className={cn(buttonVariants())}
         >
           <span className="hidden sm:block mr-2">Built by</span>
-          <span className="sm:hidden">Built by mr-2</span>
           <IconCanogaDigital width={48} height={48} />
         </a>
       </div>
